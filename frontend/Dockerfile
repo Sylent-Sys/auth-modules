@@ -3,34 +3,42 @@ FROM oven/bun:1 AS build
 
 WORKDIR /app
 
-# Cache packages installation
-COPY package.json package.json
-COPY bun.lock bun.lock
+# Copy root workspace files (monorepo)
+COPY package.json ./package.json
+COPY bun.lock ./bun.lock
 
-RUN bun install
+# Copy frontend package.json
+COPY frontend/package.json ./frontend/package.json
 
-# Copy source code and config files
-COPY ./src ./src
-COPY index.html index.html
-COPY tsconfig.json tsconfig.json
-COPY tsconfig.app.json tsconfig.app.json
-COPY tsconfig.node.json tsconfig.node.json
-COPY vite.config.ts vite.config.ts
-COPY eslint.config.js eslint.config.js
+# Install dependencies
+RUN cd frontend && bun install
+
+# Copy frontend source code and config files
+COPY frontend/src ./frontend/src
+COPY frontend/index.html ./frontend/index.html
+COPY frontend/tsconfig.json ./frontend/tsconfig.json
+COPY frontend/tsconfig.app.json ./frontend/tsconfig.app.json
+COPY frontend/tsconfig.node.json ./frontend/tsconfig.node.json
+COPY frontend/vite.config.ts ./frontend/vite.config.ts
+COPY frontend/eslint.config.js ./frontend/eslint.config.js
+
+# Copy backend for type imports (eden treaty)
+COPY backend/package.json ./backend/package.json
+COPY backend/src ./backend/src
 
 ENV NODE_ENV=production
 
 # Build the frontend
-RUN bun run build
+RUN cd frontend && bun run build
 
 # Stage 2: Production with Nginx
 FROM nginx:alpine
 
 # Copy built files to nginx
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
 # Copy custom nginx config for SPA routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
