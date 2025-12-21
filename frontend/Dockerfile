@@ -7,11 +7,12 @@ WORKDIR /app
 COPY package.json ./package.json
 COPY bun.lock ./bun.lock
 
-# Copy frontend package.json
+# Copy both frontend and backend package.json for workspace resolution
 COPY frontend/package.json ./frontend/package.json
+COPY backend/package.json ./backend/package.json
 
-# Install dependencies
-RUN cd frontend && bun install
+# Install all workspace dependencies (needed for type checking)
+RUN bun install
 
 # Copy frontend source code and config files
 COPY frontend/src ./frontend/src
@@ -22,8 +23,7 @@ COPY frontend/tsconfig.node.json ./frontend/tsconfig.node.json
 COPY frontend/vite.config.ts ./frontend/vite.config.ts
 COPY frontend/eslint.config.js ./frontend/eslint.config.js
 
-# Copy backend for type imports (eden treaty)
-COPY backend/package.json ./backend/package.json
+# Copy backend source for type imports (eden treaty)
 COPY backend/src ./backend/src
 COPY backend/tsconfig.json ./backend/tsconfig.json
 
