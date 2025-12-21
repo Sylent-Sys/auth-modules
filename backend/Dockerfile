@@ -19,40 +19,18 @@ COPY backend/tsconfig.json ./backend/tsconfig.json
 
 ENV NODE_ENV=production
 
-# Compile to binary using Elysia recommended approach
-# Using --external for mysql2 and its dependencies to ensure they're imported from node_modules at runtime
-RUN cd backend && bun build \
-	--compile \
-	--minify-whitespace \
-	--minify-syntax \
-	--target bun-linux-x64 \
-	--external mysql2 \
-	--external lru-cache \
-	--external lru.min \
-	--external denque \
-	--external iconv-lite \
-	--external long \
-	--external named-placeholders \
-	--external seq-queue \
-	--external sqlstring \
-	--outfile server \
-	src/index.ts
-
 # Stage 2: Production
-# Using bun image instead of distroless to support migration scripts
+# Using bun image for clustering support (requires Bun runtime)
 FROM oven/bun:1-slim
 
 WORKDIR /app
 
-# Copy compiled binary from build stage
-COPY --from=build /app/backend/server server
-
-# Copy entire node_modules to ensure all transitive dependencies (like lru.min) are available
+# Copy node_modules from build stage
 COPY --from=build /app/backend/node_modules ./node_modules
 
-# Copy migration files and script for runtime migration
-COPY --from=build /app/backend/src/migrations ./src/migrations
-COPY --from=build /app/backend/src/lib/db.ts ./src/lib/db.ts
+# Copy source code for clustering (cannot compile to binary with cluster mode)
+COPY --from=build /app/backend/src ./src
+COPY --from=build /app/backend/tsconfig.json ./tsconfig.json
 
 # Copy entrypoint script and convert line endings to Unix format
 COPY backend/docker-entrypoint.sh /app/docker-entrypoint.sh

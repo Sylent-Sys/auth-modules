@@ -24,6 +24,6 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
-# Start the server
-echo "Starting server on port ${PORT:-3000}..."
-exec ./server
+# Start the server with clustering
+echo "Starting server on port ${PORT:-3000} in cluster mode..."
+exec bun run src/index.ts
