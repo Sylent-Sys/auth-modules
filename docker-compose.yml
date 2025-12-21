@@ -55,6 +55,9 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: auth-modules-frontend
     restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:${BACKEND_PORT:-3000}}
     expose:
       - "80"
     depends_on:
