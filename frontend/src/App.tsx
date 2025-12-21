@@ -1,0 +1,66 @@
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+
+interface HealthStatus {
+  status: string;
+  service: string;
+  version: string;
+}
+
+function App() {
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Contoh penggunaan Eden Treaty - type-safe!
+    const checkHealth = async () => {
+      const { data, error } = await api.get();
+
+      if (error) {
+        setError("Failed to connect to API");
+        return;
+      }
+
+      setHealth(data);
+    };
+
+    checkHealth();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-base-200">
+      <div className="card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h2 className="card-title">Auth Modules</h2>
+
+          {error && (
+            <div className="alert alert-error">
+              <span>{error}</span>
+            </div>
+          )}
+
+          {health && (
+            <div className="space-y-2">
+              <p>
+                <span className="font-semibold">Status:</span>{" "}
+                <span className="badge badge-success">{health.status}</span>
+              </p>
+              <p>
+                <span className="font-semibold">Service:</span> {health.service}
+              </p>
+              <p>
+                <span className="font-semibold">Version:</span> {health.version}
+              </p>
+            </div>
+          )}
+
+          {!health && !error && (
+            <span className="loading loading-spinner loading-md"></span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
