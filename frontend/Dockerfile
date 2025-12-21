@@ -25,6 +25,7 @@ COPY frontend/eslint.config.js ./frontend/eslint.config.js
 # Copy backend for type imports (eden treaty)
 COPY backend/package.json ./backend/package.json
 COPY backend/src ./backend/src
+COPY backend/tsconfig.json ./backend/tsconfig.json
 
 ENV NODE_ENV=production
 
