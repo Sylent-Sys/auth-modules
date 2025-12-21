@@ -27,7 +27,7 @@ RUN cd backend && bun build \
 	--minify-syntax \
 	--target bun-linux-x64 \
 	--external mysql2 \
-	--external lru.min \
+	--external lru-cache \
 	--external denque \
 	--external iconv-lite \
 	--external long \
