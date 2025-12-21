@@ -5,7 +5,11 @@ import { signJWT } from "../../lib/jwt";
 
 // Environment variables
 const JWT_ISSUER = process.env.JWT_ISSUER || "https://auth-modules.com";
-const JWT_PRIVATE_KEY = process.env.JWT_PRIVATE_KEY || "";
+// Replace literal \n with actual newlines for PEM format
+const JWT_PRIVATE_KEY = (process.env.JWT_PRIVATE_KEY || "").replace(
+	/\\n/g,
+	"\n",
+);
 const JWT_EXPIRES_IN = parseInt(process.env.JWT_EXPIRES_IN || "3600", 10);
 
 interface UserRow {
@@ -41,7 +45,14 @@ export abstract class AuthService {
 		| {
 				success: true;
 				token: string;
-				user: { id: number; name: string; email: string; role: string; project_id: number; project_key: string };
+				user: {
+					id: number;
+					name: string;
+					email: string;
+					role: string;
+					project_id: number;
+					project_key: string;
+				};
 		  }
 		| { success: false; error: string; status: number }
 	> {
@@ -255,7 +266,8 @@ export abstract class AuthService {
 	 * Get public key for JWT verification
 	 */
 	static getPublicKey(): string {
-		const publicKey = process.env.JWT_PUBLIC_KEY || "";
+		// Replace literal \n with actual newlines for PEM format
+		const publicKey = (process.env.JWT_PUBLIC_KEY || "").replace(/\\n/g, "\n");
 		if (!publicKey) {
 			throw new Error("JWT public key not configured");
 		}

@@ -2,7 +2,8 @@
 import { Elysia } from "elysia";
 import { verifyJWT } from "./jwt";
 
-const JWT_PUBLIC_KEY = process.env.JWT_PUBLIC_KEY || "";
+// Replace literal \n with actual newlines for PEM format
+const JWT_PUBLIC_KEY = (process.env.JWT_PUBLIC_KEY || "").replace(/\\n/g, "\n");
 
 export interface AuthUser {
 	id: number;

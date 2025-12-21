@@ -13,7 +13,9 @@ if (cluster.isPrimary) {
 	}
 
 	cluster.on("exit", (worker, code, signal) => {
-		console.log(`Worker ${worker.process.pid} died (${signal || code}). Restarting...`);
+		console.log(
+			`Worker ${worker.process.pid} died (${signal || code}). Restarting...`,
+		);
 		cluster.fork();
 	});
 } else {
@@ -24,4 +26,3 @@ if (cluster.isPrimary) {
 
 // Re-export App type for Eden Treaty
 export type { App } from "./server";
-
