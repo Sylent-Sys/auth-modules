@@ -10,8 +10,8 @@ COPY bun.lock ./bun.lock
 # Copy backend package.json
 COPY backend/package.json ./backend/package.json
 
-# Install dependencies
-RUN cd backend && bun install
+# Install dependencies (production only for smaller image)
+RUN cd backend && bun install --production
 
 # Copy backend source code
 COPY backend/src ./backend/src
@@ -20,13 +20,20 @@ COPY backend/tsconfig.json ./backend/tsconfig.json
 ENV NODE_ENV=production
 
 # Compile to binary using Elysia recommended approach
-# Using --external for mysql2 to ensure it's imported from node_modules at runtime
+# Using --external for mysql2 and its dependencies to ensure they're imported from node_modules at runtime
 RUN cd backend && bun build \
 	--compile \
 	--minify-whitespace \
 	--minify-syntax \
 	--target bun-linux-x64 \
 	--external mysql2 \
+	--external lru.min \
+	--external denque \
+	--external iconv-lite \
+	--external long \
+	--external named-placeholders \
+	--external seq-queue \
+	--external sqlstring \
 	--outfile server \
 	src/index.ts
 
@@ -39,7 +46,7 @@ WORKDIR /app
 # Copy compiled binary from build stage
 COPY --from=build /app/backend/server server
 
-# Copy node_modules for external dependencies (mysql2)
+# Copy entire node_modules to ensure all transitive dependencies (like lru.min) are available
 COPY --from=build /app/backend/node_modules ./node_modules
 
 # Copy migration files and script for runtime migration
