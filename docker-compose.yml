@@ -13,8 +13,6 @@ services:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - auth-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -51,8 +49,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - auth-network
 
   # Frontend Service (React/Vite + Nginx)
   frontend:
@@ -68,15 +64,7 @@ services:
       - "80"
     depends_on:
       - backend
-    networks:
-      - auth-network
-
-networks:
-  auth-network:
-    driver: bridge
 
 volumes:
   mysql_data:
-    driver: local
   jwt_keys:
-    driver: local
