@@ -10,6 +10,7 @@ COPY bun.lock ./bun.lock
 # Copy frontend and SDK package.json for workspace resolution
 COPY frontend/package.json ./frontend/package.json
 COPY auth-modules-sdk/package.json ./auth-modules-sdk/package.json
+COPY backend/package.json ./backend/package.json
 
 # Copy SDK source and build config
 COPY auth-modules-sdk/src ./auth-modules-sdk/src
