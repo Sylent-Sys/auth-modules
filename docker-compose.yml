@@ -34,12 +34,18 @@ services:
       # Database configuration (connection string format)
       DATABASE_URL: mysql://${MYSQL_USER:-auth_user}:${MYSQL_PASSWORD:-auth_password}@db:3306/${MYSQL_DATABASE:-auth_modules}
       # JWT configuration (RS256)
+      # Keys will be auto-generated on first deploy if not provided
       JWT_ISSUER: ${JWT_ISSUER:-https://auth-modules.com}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3600}
-      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
-      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      # Optional: Provide keys via environment (if not provided, will use generated keys from volume)
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+      # Keys directory (volume mounted)
+      KEYS_DIR: /app/keys
       # CORS configuration
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    volumes:
+      - jwt_keys:/app/keys
     expose:
       - "3000"
     depends_on:
@@ -71,4 +77,6 @@ networks:
 
 volumes:
   mysql_data:
+    driver: local
+  jwt_keys:
     driver: local
