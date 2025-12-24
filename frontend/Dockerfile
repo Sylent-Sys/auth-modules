@@ -34,6 +34,9 @@ COPY frontend/eslint.config.js ./frontend/eslint.config.js
 
 ENV NODE_ENV=production
 
+# Install frontend dependencies
+RUN cd frontend && bun install
+
 # Build the frontend
 RUN cd frontend && bun run build
 
