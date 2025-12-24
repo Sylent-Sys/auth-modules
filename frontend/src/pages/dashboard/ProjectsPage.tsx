@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { api, withAuth } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Project {
   id: number;
@@ -10,6 +11,7 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const { isSuperAdmin } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,16 @@ export default function ProjectsPage() {
   const [formData, setFormData] = useState({ name: "", base_url: "" });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Edit project form
+  const [editProject, setEditProject] = useState<Project | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", base_url: "" });
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -79,6 +91,87 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleEditClick = (project: Project) => {
+    setEditProject(project);
+    setEditForm({
+      name: project.name,
+      base_url: project.base_url || "",
+    });
+    setUpdateError(null);
+  };
+
+  const handleUpdate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editProject) return;
+
+    setUpdating(true);
+    setUpdateError(null);
+
+    try {
+      const updateData: { name?: string; base_url?: string | null } = {};
+
+      if (editForm.name !== editProject.name) {
+        updateData.name = editForm.name;
+      }
+      if (editForm.base_url !== (editProject.base_url || "")) {
+        updateData.base_url = editForm.base_url || null;
+      }
+
+      // Don't update if nothing changed
+      if (Object.keys(updateData).length === 0) {
+        setEditProject(null);
+        return;
+      }
+
+      const { data, error: apiError } = await api.api.v1.projects({ id: editProject.id }).put(
+        updateData,
+        withAuth()
+      );
+
+      if (apiError) {
+        const errData = apiError.value as { error?: string };
+        setUpdateError(errData?.error || "Failed to update project");
+        return;
+      }
+
+      if (data?.success) {
+        setEditProject(null);
+        fetchProjects();
+      }
+    } catch {
+      setUpdateError("Network error. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      const { data, error: apiError } = await api.api.v1.projects({ id: deleteTarget.id }).delete(
+        {},
+        withAuth()
+      );
+
+      if (apiError) {
+        const errData = apiError.value as { error?: string };
+        setError(errData?.error || "Failed to delete project");
+        return;
+      }
+
+      if (data?.success) {
+        setDeleteTarget(null);
+        fetchProjects();
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
@@ -130,9 +223,19 @@ export default function ProjectsPage() {
             />
           </svg>
           <span>{error}</span>
-          <button className="btn btn-sm" onClick={fetchProjects}>
-            Retry
+          <button className="btn btn-sm" onClick={() => setError(null)}>
+            Dismiss
           </button>
+        </div>
+      )}
+
+      {/* RBAC Info */}
+      {!isSuperAdmin && (
+        <div className="alert alert-info">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>You have Admin access. Edit and Delete actions require Super Admin privileges.</span>
         </div>
       )}
 
@@ -156,12 +259,13 @@ export default function ProjectsPage() {
                     <th>Project Key</th>
                     <th>Base URL</th>
                     <th>Created At</th>
+                    {isSuperAdmin && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {projects.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 text-base-content/60">
+                      <td colSpan={isSuperAdmin ? 6 : 5} className="text-center py-8 text-base-content/60">
                         No projects found. Create your first project!
                       </td>
                     </tr>
@@ -214,6 +318,24 @@ export default function ProjectsPage() {
                         <td className="text-sm">
                           {new Date(project.created_at).toLocaleDateString()}
                         </td>
+                        {isSuperAdmin && (
+                          <td>
+                            <div className="flex gap-1">
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => handleEditClick(project)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-xs text-error"
+                                onClick={() => setDeleteTarget(project)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
@@ -298,6 +420,132 @@ export default function ProjectsPage() {
           <button onClick={() => setShowModal(false)}>close</button>
         </form>
       </dialog>
+
+      {/* Edit Project Modal */}
+      {editProject && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Edit Project</h3>
+
+            {updateError && (
+              <div className="alert alert-error mt-4">
+                <span>{updateError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdate} className="mt-4 space-y-4">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Project Key</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  value={editProject.project_key}
+                  disabled
+                />
+                <label className="label">
+                  <span className="label-text-alt text-base-content/60">
+                    Project key cannot be changed
+                  </span>
+                </label>
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Project Name *</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="My Awesome Project"
+                  className="input input-bordered w-full"
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Base URL</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://myapp.example.com"
+                  className="input input-bordered w-full"
+                  value={editForm.base_url}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, base_url: e.target.value })
+                  }
+                />
+                <label className="label">
+                  <span className="label-text-alt text-base-content/60">
+                    Used for CORS configuration. Leave empty to remove.
+                  </span>
+                </label>
+              </div>
+
+              <div className="modal-action">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setEditProject(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={updating}
+                >
+                  {updating && <span className="loading loading-spinner"></span>}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setEditProject(null)}>close</button>
+          </form>
+        </dialog>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg text-error">Delete Project</h3>
+            <p className="py-4">
+              Are you sure you want to delete project{" "}
+              <span className="font-semibold">{deleteTarget.name}</span>?
+            </p>
+            <p className="text-sm text-base-content/60">
+              Project key: <code>{deleteTarget.project_key}</code>
+            </p>
+            <p className="text-sm text-warning mt-2">
+              This action cannot be undone. Make sure there are no active assignments.
+            </p>
+            <div className="modal-action">
+              <button className="btn" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-error"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting && <span className="loading loading-spinner"></span>}
+                Delete
+              </button>
+            </div>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setDeleteTarget(null)}>close</button>
+          </form>
+        </dialog>
+      )}
     </div>
   );
 }

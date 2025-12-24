@@ -2,6 +2,23 @@
 import { t } from "elysia";
 
 export namespace UsersModel {
+	// POST /users - Create user
+	export const createBody = t.Object({
+		name: t.String({ minLength: 1 }),
+		email: t.String({ format: "email" }),
+		password: t.String({ minLength: 6 }),
+	});
+
+	export const createResponse = t.Object({
+		success: t.Boolean(),
+		user: t.Object({
+			id: t.Number(),
+			name: t.String(),
+			email: t.String(),
+			created_at: t.String(),
+		}),
+	});
+
 	// GET /users - List users
 	export const listResponse = t.Object({
 		success: t.Boolean(),

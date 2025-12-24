@@ -35,6 +35,32 @@ export namespace ProjectModel {
 	});
 	export type ListResponse = typeof listResponse.static;
 
+	// PUT /projects/:id
+	export const updateBody = t.Object({
+		name: t.Optional(t.String({ minLength: 1 })),
+		base_url: t.Optional(t.Union([t.String(), t.Null()])),
+	});
+	export type UpdateBody = typeof updateBody.static;
+
+	export const updateResponse = t.Object({
+		success: t.Boolean(),
+		project: t.Object({
+			id: t.Number(),
+			name: t.String(),
+			project_key: t.String(),
+			base_url: t.Union([t.String(), t.Null()]),
+			created_at: t.String(),
+		}),
+	});
+	export type UpdateResponse = typeof updateResponse.static;
+
+	// DELETE /projects/:id
+	export const deleteResponse = t.Object({
+		success: t.Boolean(),
+		message: t.String(),
+	});
+	export type DeleteResponse = typeof deleteResponse.static;
+
 	// Error response
 	export const errorResponse = t.Object({
 		success: t.Boolean(),

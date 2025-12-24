@@ -1,6 +1,7 @@
 // Users Controller - HTTP routing for user management (Super Admin only)
 import { Elysia, t } from "elysia";
 import { authGuard } from "../../lib/middleware";
+import { AuditLogService } from "../../lib/audit-log";
 import { UsersService } from "./service";
 import { UsersModel } from "./model";
 
@@ -9,6 +10,56 @@ export const usersController = new Elysia({
 	tags: ["Users"],
 })
 	.use(authGuard)
+
+	// POST /users - Create new user (Super Admin only)
+	.post(
+		"/",
+		async ({ body, set, user }) => {
+			const result = await UsersService.create(
+				body.name,
+				body.email,
+				body.password,
+			);
+
+			if (!result.success) {
+				set.status = result.status;
+				return { success: false, error: result.error };
+			}
+
+			// Audit log
+			await AuditLogService.log({
+				entityType: "user",
+				entityId: result.user.id,
+				action: "create",
+				actorId: user.id,
+				actorName: user.name,
+				changes: { name: body.name, email: body.email },
+			});
+
+			set.status = 201;
+			return {
+				success: true,
+				user: {
+					...result.user,
+					created_at: String(result.user.created_at),
+				},
+			};
+		},
+		{
+			isSuperAdmin: true,
+			body: UsersModel.createBody,
+			response: {
+				201: UsersModel.createResponse,
+				401: UsersModel.errorResponse,
+				403: UsersModel.errorResponse,
+				409: UsersModel.errorResponse,
+			},
+			detail: {
+				summary: "Create a new user",
+				description: "Create a new user account. Requires super admin access.",
+			},
+		},
+	)
 
 	// GET /users - List all users
 	.get(
@@ -80,13 +131,28 @@ export const usersController = new Elysia({
 	// PUT /users/:id - Update user
 	.put(
 		"/:id",
-		async ({ params, body, set }) => {
+		async ({ params, body, set, user }) => {
 			const result = await UsersService.update(params.id, body);
 
 			if (!result.success) {
 				set.status = result.status;
 				return { success: false, error: result.error };
 			}
+
+			// Audit log (exclude password from changes)
+			const changes: Record<string, unknown> = {};
+			if (body.name) changes.name = body.name;
+			if (body.email) changes.email = body.email;
+			if (body.password) changes.password = "[changed]";
+
+			await AuditLogService.log({
+				entityType: "user",
+				entityId: params.id,
+				action: "update",
+				actorId: user.id,
+				actorName: user.name,
+				changes,
+			});
 
 			return {
 				success: true,
@@ -117,13 +183,29 @@ export const usersController = new Elysia({
 	// DELETE /users/:id - Delete user
 	.delete(
 		"/:id",
-		async ({ params, set }) => {
+		async ({ params, set, user }) => {
+			// Get user info before deletion for log
+			const userInfo = await UsersService.getById(params.id);
+			const deletedUserName = userInfo.success
+				? userInfo.user.name
+				: `User #${params.id}`;
+
 			const result = await UsersService.delete(params.id);
 
 			if (!result.success) {
 				set.status = result.status;
 				return { success: false, error: result.error };
 			}
+
+			// Audit log
+			await AuditLogService.log({
+				entityType: "user",
+				entityId: params.id,
+				action: "delete",
+				actorId: user.id,
+				actorName: user.name,
+				changes: { deleted_user: deletedUserName },
+			});
 
 			return { success: true, message: "User deleted successfully" };
 		},

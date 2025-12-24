@@ -16,6 +16,7 @@ import {
   AssignmentsPage,
   UsersPage,
   RolesPage,
+  AuditLogsPage,
 } from "@/pages";
 import "./index.css";
 
@@ -44,6 +45,7 @@ createRoot(document.getElementById("root")!).render(
             <Route element={<SuperAdminLayout />}>
               <Route path="users" element={<UsersPage />} />
               <Route path="roles" element={<RolesPage />} />
+              <Route path="audit-logs" element={<AuditLogsPage />} />
             </Route>
           </Route>
 

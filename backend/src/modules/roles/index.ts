@@ -1,6 +1,7 @@
 // Roles Controller - HTTP routing for role management (Super Admin only)
 import { Elysia, t } from "elysia";
 import { authGuard } from "../../lib/middleware";
+import { AuditLogService } from "../../lib/audit-log";
 import { RolesService } from "./service";
 import { RolesModel } from "./model";
 
@@ -39,13 +40,23 @@ export const rolesController = new Elysia({
 	// POST /roles - Create a new role
 	.post(
 		"/",
-		async ({ body, set }) => {
+		async ({ body, set, user }) => {
 			const result = await RolesService.create(body.name, body.description);
 
 			if (!result.success) {
 				set.status = result.status;
 				return { success: false, error: result.error };
 			}
+
+			// Audit log
+			await AuditLogService.log({
+				entityType: "role",
+				entityId: result.role.id,
+				action: "create",
+				actorId: user.id,
+				actorName: user.name,
+				changes: { name: body.name, description: body.description || null },
+			});
 
 			set.status = 201;
 			return {
@@ -72,13 +83,28 @@ export const rolesController = new Elysia({
 	// PUT /roles/:id - Update a role
 	.put(
 		"/:id",
-		async ({ params, body, set }) => {
+		async ({ params, body, set, user }) => {
 			const result = await RolesService.update(params.id, body);
 
 			if (!result.success) {
 				set.status = result.status;
 				return { success: false, error: result.error };
 			}
+
+			// Audit log
+			const changes: Record<string, unknown> = {};
+			if (body.name) changes.name = body.name;
+			if (body.description !== undefined)
+				changes.description = body.description;
+
+			await AuditLogService.log({
+				entityType: "role",
+				entityId: params.id,
+				action: "update",
+				actorId: user.id,
+				actorName: user.name,
+				changes,
+			});
 
 			return {
 				success: true,
@@ -109,13 +135,28 @@ export const rolesController = new Elysia({
 	// DELETE /roles/:id - Delete a role
 	.delete(
 		"/:id",
-		async ({ params, set }) => {
+		async ({ params, set, user }) => {
+			// Get role info before deletion for log
+			const roles = await RolesService.list();
+			const targetRole = roles.find((r) => r.id === params.id);
+			const deletedRoleName = targetRole?.name || `Role #${params.id}`;
+
 			const result = await RolesService.delete(params.id);
 
 			if (!result.success) {
 				set.status = result.status;
 				return { success: false, error: result.error };
 			}
+
+			// Audit log
+			await AuditLogService.log({
+				entityType: "role",
+				entityId: params.id,
+				action: "delete",
+				actorId: user.id,
+				actorName: user.name,
+				changes: { deleted_role: deletedRoleName },
+			});
 
 			return { success: true, message: "Role deleted successfully" };
 		},

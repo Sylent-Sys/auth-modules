@@ -31,6 +31,47 @@ export abstract class UsersService {
 	}
 
 	/**
+	 * Create a new user (admin-side)
+	 */
+	static async create(
+		name: string,
+		email: string,
+		password: string,
+	): Promise<
+		| { success: true; user: UserRow }
+		| { success: false; error: string; status: number }
+	> {
+		// Check if email already exists
+		const existing = await sql`
+			SELECT id FROM users WHERE email = ${email} LIMIT 1
+		`;
+
+		if (existing.length > 0) {
+			return { success: false, error: "Email already in use", status: 409 };
+		}
+
+		const hashedPassword = await hashPassword(password);
+
+		await sql`
+			INSERT INTO users (name, email, password)
+			VALUES (${name}, ${email}, ${hashedPassword})
+		`;
+
+		// Fetch created user
+		const users = await sql`
+			SELECT id, name, email, created_at
+			FROM users
+			WHERE email = ${email}
+			LIMIT 1
+		`;
+
+		return {
+			success: true,
+			user: users[0] as UserRow,
+		};
+	}
+
+	/**
 	 * Get user by ID with assignments
 	 */
 	static async getById(

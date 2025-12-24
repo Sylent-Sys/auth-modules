@@ -5,3 +5,4 @@ export { default as ProjectsPage } from "./dashboard/ProjectsPage";
 export { default as AssignmentsPage } from "./dashboard/AssignmentsPage";
 export { default as UsersPage } from "./dashboard/UsersPage";
 export { default as RolesPage } from "./dashboard/RolesPage";
+export { default as AuditLogsPage } from "./dashboard/AuditLogsPage";

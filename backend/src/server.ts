@@ -8,6 +8,7 @@ import { projectsController } from "./modules/projects";
 import { assignmentsController } from "./modules/assignments";
 import { usersController } from "./modules/users";
 import { rolesController } from "./modules/roles";
+import { auditLogsController } from "./modules/audit-logs";
 import { initCorsOrigins, isOriginAllowed } from "./lib/cors";
 
 const PORT = process.env.PORT || 3000;
@@ -49,6 +50,7 @@ const app = new Elysia()
 					},
 					{ name: "Users", description: "User management (Super Admin)" },
 					{ name: "Roles", description: "Role management (Super Admin)" },
+					{ name: "Audit Logs", description: "Audit logs (Super Admin)" },
 				],
 			},
 		}),
@@ -66,7 +68,8 @@ const app = new Elysia()
 			.use(projectsController)
 			.use(assignmentsController)
 			.use(usersController)
-			.use(rolesController),
+			.use(rolesController)
+			.use(auditLogsController),
 	)
 	// Error handler
 	.onError(({ code, error, set }) => {

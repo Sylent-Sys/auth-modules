@@ -54,6 +54,9 @@ export function ProtectedLayout() {
               <li>
                 <a href="/dashboard/roles">Roles</a>
               </li>
+              <li>
+                <a href="/dashboard/audit-logs">Audit Logs</a>
+              </li>
             </ul>
           )}
           <div className="dropdown dropdown-end">

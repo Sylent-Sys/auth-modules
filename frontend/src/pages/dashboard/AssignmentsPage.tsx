@@ -44,6 +44,12 @@ export default function AssignmentsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // Edit assignment (change role)
+  const [editTarget, setEditTarget] = useState<Assignment | null>(null);
+  const [editRoleId, setEditRoleId] = useState<string>("");
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{
     user_id: number;
@@ -145,6 +151,53 @@ export default function AssignmentsPage() {
       setCreateError("Network error. Please try again.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleEditClick = (assignment: Assignment) => {
+    setEditTarget(assignment);
+    setEditRoleId(String(assignment.role_id));
+    setUpdateError(null);
+  };
+
+  const handleUpdate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+
+    // Don't update if role hasn't changed
+    if (Number(editRoleId) === editTarget.role_id) {
+      setEditTarget(null);
+      return;
+    }
+
+    setUpdating(true);
+    setUpdateError(null);
+
+    try {
+      // Use POST to update (upsert behavior in backend)
+      const { data, error: apiError } = await api.api.v1.assignments.post(
+        {
+          user_id: editTarget.user_id,
+          project_id: editTarget.project_id,
+          role_id: Number(editRoleId),
+        },
+        withAuth()
+      );
+
+      if (apiError) {
+        const errData = apiError.value as { error?: string };
+        setUpdateError(errData?.error || "Failed to update assignment");
+        return;
+      }
+
+      if (data?.success) {
+        setEditTarget(null);
+        fetchAssignments();
+      }
+    } catch {
+      setUpdateError("Network error. Please try again.");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -343,33 +396,55 @@ export default function AssignmentsPage() {
                           {new Date(assignment.created_at).toLocaleDateString()}
                         </td>
                         <td>
-                          <button
-                            title="Klik"
-                            className="btn btn-ghost btn-sm text-error"
-                            onClick={() =>
-                              setDeleteTarget({
-                                user_id: assignment.user_id,
-                                project_id: assignment.project_id,
-                                user_name: assignment.user_name,
-                                project_name: assignment.project_name,
-                              })
-                            }
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
+                          <div className="flex gap-1">
+                            <button
+                              title="Edit Role"
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => handleEditClick(assignment)}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              title="Delete"
+                              className="btn btn-ghost btn-sm text-error"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  user_id: assignment.user_id,
+                                  project_id: assignment.project_id,
+                                  user_name: assignment.user_name,
+                                  project_name: assignment.project_name,
+                                })
+                              }
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -510,6 +585,81 @@ export default function AssignmentsPage() {
           <button onClick={() => setDeleteTarget(null)}>close</button>
         </form>
       </dialog>
+
+      {/* Edit Assignment Modal (Change Role) */}
+      {editTarget && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Change Role</h3>
+            <form onSubmit={handleUpdate} className="py-4 space-y-4">
+              {updateError && (
+                <div className="alert alert-error alert-sm">
+                  <span>{updateError}</span>
+                </div>
+              )}
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">User</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={`${editTarget.user_name} (${editTarget.user_email})`}
+                  disabled
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Project</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={editTarget.project_name}
+                  disabled
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Role</span>
+                </label>
+                <select
+                  title="Select role"
+                  className="select select-bordered"
+                  value={editRoleId}
+                  onChange={(e) => setEditRoleId(e.target.value)}
+                  required
+                >
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-action">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setEditTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={updating}>
+                  {updating ? <span className="loading loading-spinner loading-sm"></span> : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setEditTarget(null)}>close</button>
+          </form>
+        </dialog>
+      )}
     </div>
   );
 }

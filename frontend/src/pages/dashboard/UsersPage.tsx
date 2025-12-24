@@ -31,6 +31,16 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Create user modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   // Edit user modal
   const [editUser, setEditUser] = useState<UserDetail | null>(null);
   const [editForm, setEditForm] = useState({
@@ -75,6 +85,39 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const handleCreate = async (e: FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError(null);
+
+    try {
+      const { data, error: apiError } = await api.api.v1.users.post(
+        {
+          name: createForm.name,
+          email: createForm.email,
+          password: createForm.password,
+        },
+        withAuth()
+      );
+
+      if (apiError) {
+        const errData = apiError.value as { error?: string };
+        setCreateError(errData?.error || "Failed to create user");
+        return;
+      }
+
+      if (data?.success) {
+        setShowCreateModal(false);
+        setCreateForm({ name: "", email: "", password: "" });
+        fetchUsers();
+      }
+    } catch {
+      setCreateError("Network error. Please try again.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleViewUser = async (userId: number) => {
     setLoadingDetail(true);
@@ -207,9 +250,14 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold">Users Management</h1>
           <p className="text-base-content/60">Manage all registered users</p>
         </div>
-        <button onClick={fetchUsers} className="btn btn-outline btn-sm" disabled={loading}>
-          {loading ? <span className="loading loading-spinner loading-sm"></span> : "Refresh"}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={fetchUsers} className="btn btn-outline btn-sm" disabled={loading}>
+            {loading ? <span className="loading loading-spinner loading-sm"></span> : "Refresh"}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
+            + New User
+          </button>
+        </div>
       </div>
 
       {/* Error Alert */}
@@ -445,6 +493,92 @@ export default function UsersPage() {
           </div>
           <form method="dialog" className="modal-backdrop">
             <button onClick={() => setDeleteTarget(null)}>close</button>
+          </form>
+        </dialog>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Create New User</h3>
+            <form onSubmit={handleCreate} className="py-4 space-y-4">
+              {createError && (
+                <div className="alert alert-error alert-sm">
+                  <span>{createError}</span>
+                </div>
+              )}
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Name</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Email</span>
+                </label>
+                <input
+                  type="email"
+                  className="input input-bordered"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  placeholder="john@example.com"
+                  required
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
+                <input
+                  type="password"
+                  className="input input-bordered"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  placeholder="Minimum 6 characters"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div className="alert alert-info alert-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>User will need to be assigned to a project to login.</span>
+              </div>
+
+              <div className="modal-action">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setCreateForm({ name: "", email: "", password: "" });
+                    setCreateError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={creating}>
+                  {creating ? <span className="loading loading-spinner loading-sm"></span> : "Create"}
+                </button>
+              </div>
+            </form>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button onClick={() => setShowCreateModal(false)}>close</button>
           </form>
         </dialog>
       )}

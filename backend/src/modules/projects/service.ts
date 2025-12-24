@@ -116,4 +116,103 @@ export abstract class ProjectService {
 
 		return projects[0] as ProjectRow;
 	}
+
+	/**
+	 * Get project by ID
+	 */
+	static async getById(id: number): Promise<ProjectRow | null> {
+		const projects = await sql`
+      SELECT id, name, project_key, base_url, created_at
+      FROM projects
+      WHERE id = ${id}
+      LIMIT 1
+    `;
+
+		if (projects.length === 0) {
+			return null;
+		}
+
+		return projects[0] as ProjectRow;
+	}
+
+	/**
+	 * Update a project
+	 */
+	static async update(
+		id: number,
+		data: { name?: string; base_url?: string | null },
+	): Promise<
+		| { success: true; project: ProjectRow }
+		| { success: false; error: string; status: number }
+	> {
+		const existing = await ProjectService.getById(id);
+		if (!existing) {
+			return { success: false, error: "Project not found", status: 404 };
+		}
+
+		const newName = data.name ?? existing.name;
+		const newBaseUrl =
+			data.base_url !== undefined ? data.base_url : existing.base_url;
+
+		try {
+			await sql`
+        UPDATE projects
+        SET name = ${newName}, base_url = ${newBaseUrl}
+        WHERE id = ${id}
+      `;
+
+			// Refresh CORS cache if base_url changed
+			if (data.base_url !== undefined) {
+				await refreshOriginsCache();
+			}
+
+			const updated = await ProjectService.getById(id);
+			return { success: true, project: updated as ProjectRow };
+		} catch (error: unknown) {
+			const err = error as { code?: string };
+			if (err.code === "ER_DUP_ENTRY") {
+				return {
+					success: false,
+					error: "Project name already exists",
+					status: 409,
+				};
+			}
+			throw error;
+		}
+	}
+
+	/**
+	 * Delete a project
+	 */
+	static async delete(
+		id: number,
+	): Promise<
+		{ success: true } | { success: false; error: string; status: number }
+	> {
+		const existing = await ProjectService.getById(id);
+		if (!existing) {
+			return { success: false, error: "Project not found", status: 404 };
+		}
+
+		// Check if project has assignments
+		const assignments = await sql`
+      SELECT id FROM project_assignments WHERE project_id = ${id} LIMIT 1
+    `;
+
+		if (assignments.length > 0) {
+			return {
+				success: false,
+				error:
+					"Cannot delete project with active assignments. Remove all assignments first.",
+				status: 409,
+			};
+		}
+
+		await sql`DELETE FROM projects WHERE id = ${id}`;
+
+		// Refresh CORS cache
+		await refreshOriginsCache();
+
+		return { success: true };
+	}
 }
