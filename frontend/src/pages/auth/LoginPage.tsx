@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { api } from "@/lib/api";
+import { client } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { SDKError } from "auth-modules-sdk";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -21,20 +22,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error: apiError } = await api.api.v1.auth.login.post(formData);
+      const data = await client.auth.login(formData);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Login failed");
-        return;
-      }
-
-      if (data?.success && data.token && data.user) {
+      if (data.success && data.token && data.user) {
         login(data.token, data.user);
         navigate("/dashboard");
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

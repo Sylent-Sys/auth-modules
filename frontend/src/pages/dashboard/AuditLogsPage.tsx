@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { api, withAuth } from "@/lib/api";
-
-interface AuditLog {
-  id: number;
-  entity_type: "user" | "role";
-  entity_id: number;
-  action: "create" | "update" | "delete";
-  actor_id: number;
-  actor_name: string;
-  changes: Record<string, unknown> | null;
-  created_at: string;
-}
+import { client } from "@/lib/api";
+import { SDKError, type AuditLog } from "auth-modules-sdk";
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -29,7 +19,12 @@ export default function AuditLogsPage() {
     setError(null);
 
     try {
-      const queryParams: Record<string, unknown> = {
+      const queryParams: {
+        entity_type?: "user" | "role";
+        action?: "create" | "update" | "delete";
+        limit?: number;
+        offset?: number;
+      } = {
         limit,
         offset: (page - 1) * limit,
       };
@@ -37,28 +32,18 @@ export default function AuditLogsPage() {
       if (entityType) queryParams.entity_type = entityType;
       if (action) queryParams.action = action;
 
-      const { data, error: apiError } = await api.api.v1["audit-logs"].get({
-        query: queryParams as {
-          entity_type?: "user" | "role";
-          action?: "create" | "update" | "delete";
-          limit?: number;
-          offset?: number;
-        },
-        ...withAuth(),
-      });
+      const data = await client.auditLogs.list(queryParams);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch audit logs");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setLogs(data.logs);
         setTotal(data.total);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

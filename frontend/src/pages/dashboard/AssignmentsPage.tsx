@@ -1,28 +1,6 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
-import { api, withAuth } from "@/lib/api";
-
-interface Assignment {
-  id: number;
-  user_id: number;
-  user_name: string;
-  user_email: string;
-  project_id: number;
-  project_name: string;
-  role_id: number;
-  role_name: string;
-  created_at: string;
-}
-
-interface Role {
-  id: number;
-  name: string;
-}
-
-interface Project {
-  id: number;
-  name: string;
-  project_key: string;
-}
+import { client } from "@/lib/api";
+import { SDKError, type Assignment, type Role, type Project } from "auth-modules-sdk";
 
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -68,22 +46,17 @@ export default function AssignmentsPage() {
         ? { project_id: Number(filterProjectId) }
         : undefined;
 
-      const { data, error: apiError } = await api.api.v1.assignments.get({
-        ...withAuth(),
-        query,
-      });
+      const data = await client.assignments.list(query);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch assignments");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setAssignments(data.assignments);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -91,8 +64,8 @@ export default function AssignmentsPage() {
 
   const fetchRoles = async () => {
     try {
-      const { data } = await api.api.v1.assignments.roles.get(withAuth());
-      if (data?.success) {
+      const data = await client.assignments.listRoles();
+      if (data.success) {
         setRoles(data.roles);
       }
     } catch {
@@ -102,8 +75,8 @@ export default function AssignmentsPage() {
 
   const fetchProjects = async () => {
     try {
-      const { data } = await api.api.v1.projects.get(withAuth());
-      if (data?.success) {
+      const data = await client.projects.list();
+      if (data.success) {
         setProjects(data.projects);
       }
     } catch {
@@ -127,28 +100,23 @@ export default function AssignmentsPage() {
     setCreating(true);
 
     try {
-      const { data, error: apiError } = await api.api.v1.assignments.post(
-        {
-          user_id: Number(formData.user_id),
-          project_id: Number(formData.project_id),
-          role_id: Number(formData.role_id),
-        },
-        withAuth()
-      );
+      const data = await client.assignments.create({
+        user_id: Number(formData.user_id),
+        project_id: Number(formData.project_id),
+        role_id: Number(formData.role_id),
+      });
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setCreateError(errData?.error || "Failed to create assignment");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setShowModal(false);
         setFormData({ user_id: "", project_id: "", role_id: "" });
         fetchAssignments();
       }
-    } catch {
-      setCreateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setCreateError(err.message);
+      } else {
+        setCreateError("Network error. Please try again.");
+      }
     } finally {
       setCreating(false);
     }
@@ -174,28 +142,23 @@ export default function AssignmentsPage() {
     setUpdateError(null);
 
     try {
-      // Use POST to update (upsert behavior in backend)
-      const { data, error: apiError } = await api.api.v1.assignments.post(
-        {
-          user_id: editTarget.user_id,
-          project_id: editTarget.project_id,
-          role_id: Number(editRoleId),
-        },
-        withAuth()
-      );
+      // Use create to update (upsert behavior in backend)
+      const data = await client.assignments.create({
+        user_id: editTarget.user_id,
+        project_id: editTarget.project_id,
+        role_id: Number(editRoleId),
+      });
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setUpdateError(errData?.error || "Failed to update assignment");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setEditTarget(null);
         fetchAssignments();
       }
-    } catch {
-      setUpdateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setUpdateError(err.message);
+      } else {
+        setUpdateError("Network error. Please try again.");
+      }
     } finally {
       setUpdating(false);
     }
@@ -207,26 +170,19 @@ export default function AssignmentsPage() {
     setDeleting(true);
 
     try {
-      const { error: apiError } = await api.api.v1.assignments.delete(
-        {},
-        {
-          ...withAuth(),
-          query: {
-            user_id: deleteTarget.user_id,
-            project_id: deleteTarget.project_id,
-          },
-        }
-      );
-
-      if (apiError) {
-        setError("Failed to delete assignment");
-        return;
-      }
+      await client.assignments.delete({
+        user_id: deleteTarget.user_id,
+        project_id: deleteTarget.project_id,
+      });
 
       setDeleteTarget(null);
       fetchAssignments();
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setDeleting(false);
     }

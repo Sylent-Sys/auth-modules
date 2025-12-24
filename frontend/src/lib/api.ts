@@ -1,30 +1,18 @@
-// Eden Treaty client - Type-safe API client
-import { treaty } from "@elysiajs/eden";
-import type { App } from "@backend/index";
+// Auth Modules SDK Client
+import { createClient, type AuthModulesClient } from "auth-modules-sdk";
 
-// API base URL - sesuaikan dengan environment
+// API base URL from environment
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-// Get token from localStorage
-const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem("auth_token");
-  if (token) {
-    return { Authorization: `Bearer ${token}` };
-  }
-  return {};
-};
-
-// Create Eden Treaty client
-export const api = treaty<App>(API_URL, {
-  fetch: {
-    credentials: "include",
+// Create SDK client instance with browser storage
+export const client = createClient({
+  baseUrl: API_URL,
+  storage: {
+    getItem: (key: string) => localStorage.getItem(key),
+    setItem: (key: string, value: string) => localStorage.setItem(key, value),
+    removeItem: (key: string) => localStorage.removeItem(key),
   },
 });
 
-// Helper to create authenticated request options
-export const withAuth = () => ({
-  headers: getAuthHeaders(),
-});
-
-// Export types for convenience
-export type ApiClient = typeof api;
+// Export client type for convenience
+export type { AuthModulesClient };

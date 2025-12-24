@@ -1,14 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { api, withAuth } from "@/lib/api";
+import { client } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-
-interface Project {
-  id: number;
-  name: string;
-  project_key: string;
-  base_url: string | null;
-  created_at: string;
-}
+import { SDKError, type Project } from "auth-modules-sdk";
 
 export default function ProjectsPage() {
   const { isSuperAdmin } = useAuth();
@@ -37,19 +30,17 @@ export default function ProjectsPage() {
     setError(null);
 
     try {
-      const { data, error: apiError } = await api.api.v1.projects.get(withAuth());
+      const data = await client.projects.list();
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch projects");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setProjects(data.projects);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -65,27 +56,22 @@ export default function ProjectsPage() {
     setCreating(true);
 
     try {
-      const { data, error: apiError } = await api.api.v1.projects.post(
-        {
-          name: formData.name,
-          base_url: formData.base_url || undefined,
-        },
-        withAuth()
-      );
+      const data = await client.projects.create({
+        name: formData.name,
+        base_url: formData.base_url || undefined,
+      });
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setCreateError(errData?.error || "Failed to create project");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setShowModal(false);
         setFormData({ name: "", base_url: "" });
         fetchProjects();
       }
-    } catch {
-      setCreateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setCreateError(err.message);
+      } else {
+        setCreateError("Network error. Please try again.");
+      }
     } finally {
       setCreating(false);
     }
@@ -123,23 +109,18 @@ export default function ProjectsPage() {
         return;
       }
 
-      const { data, error: apiError } = await api.api.v1.projects({ id: editProject.id }).put(
-        updateData,
-        withAuth()
-      );
+      const data = await client.projects.update(editProject.id, updateData);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setUpdateError(errData?.error || "Failed to update project");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setEditProject(null);
         fetchProjects();
       }
-    } catch {
-      setUpdateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setUpdateError(err.message);
+      } else {
+        setUpdateError("Network error. Please try again.");
+      }
     } finally {
       setUpdating(false);
     }
@@ -150,23 +131,18 @@ export default function ProjectsPage() {
 
     setDeleting(true);
     try {
-      const { data, error: apiError } = await api.api.v1.projects({ id: deleteTarget.id }).delete(
-        {},
-        withAuth()
-      );
+      const data = await client.projects.delete(deleteTarget.id);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to delete project");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setDeleteTarget(null);
         fetchProjects();
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setDeleting(false);
     }
@@ -316,7 +292,9 @@ export default function ProjectsPage() {
                           )}
                         </td>
                         <td className="text-sm">
-                          {new Date(project.created_at).toLocaleDateString()}
+                          {project.created_at
+                            ? new Date(project.created_at).toLocaleDateString()
+                            : "-"}
                         </td>
                         {isSuperAdmin && (
                           <td>

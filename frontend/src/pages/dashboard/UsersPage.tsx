@@ -1,30 +1,6 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
-import { api, withAuth } from "@/lib/api";
-
-interface UserAssignment {
-  project_id: number;
-  project_name: string;
-  project_key: string;
-  role_id: number;
-  role_name: string;
-}
-
-// User from list endpoint (no assignments)
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  created_at: string;
-}
-
-// User detail with assignments
-interface UserDetail {
-  id: number;
-  name: string;
-  email: string;
-  assignments: UserAssignment[];
-  created_at: string;
-}
+import { client } from "@/lib/api";
+import { SDKError, type User, type UserDetail } from "auth-modules-sdk";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -64,19 +40,17 @@ export default function UsersPage() {
     setError(null);
 
     try {
-      const { data, error: apiError } = await api.api.v1.users.get(withAuth());
+      const data = await client.users.list();
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch users");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setUsers(data.users);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -92,28 +66,23 @@ export default function UsersPage() {
     setCreateError(null);
 
     try {
-      const { data, error: apiError } = await api.api.v1.users.post(
-        {
-          name: createForm.name,
-          email: createForm.email,
-          password: createForm.password,
-        },
-        withAuth()
-      );
+      const data = await client.users.create({
+        name: createForm.name,
+        email: createForm.email,
+        password: createForm.password,
+      });
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setCreateError(errData?.error || "Failed to create user");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setShowCreateModal(false);
         setCreateForm({ name: "", email: "", password: "" });
         fetchUsers();
       }
-    } catch {
-      setCreateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setCreateError(err.message);
+      } else {
+        setCreateError("Network error. Please try again.");
+      }
     } finally {
       setCreating(false);
     }
@@ -122,19 +91,17 @@ export default function UsersPage() {
   const handleViewUser = async (userId: number) => {
     setLoadingDetail(true);
     try {
-      const { data, error: apiError } = await api.api.v1.users({ id: userId }).get(withAuth());
+      const data = await client.users.getById(userId);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch user details");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setViewUser(data.user);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoadingDetail(false);
     }
@@ -144,15 +111,9 @@ export default function UsersPage() {
     setLoadingDetail(true);
     setUpdateError(null);
     try {
-      const { data, error: apiError } = await api.api.v1.users({ id: userId }).get(withAuth());
+      const data = await client.users.getById(userId);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch user details");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setEditUser(data.user);
         setEditForm({
           name: data.user.name,
@@ -160,8 +121,12 @@ export default function UsersPage() {
           password: "",
         });
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoadingDetail(false);
     }
@@ -193,23 +158,18 @@ export default function UsersPage() {
         return;
       }
 
-      const { data, error: apiError } = await api.api.v1.users({ id: editUser.id }).put(
-        updateData,
-        withAuth()
-      );
+      const data = await client.users.update(editUser.id, updateData);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setUpdateError(errData?.error || "Failed to update user");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setEditUser(null);
         fetchUsers();
       }
-    } catch {
-      setUpdateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setUpdateError(err.message);
+      } else {
+        setUpdateError("Network error. Please try again.");
+      }
     } finally {
       setUpdating(false);
     }
@@ -220,23 +180,18 @@ export default function UsersPage() {
 
     setDeleting(true);
     try {
-      const { data, error: apiError } = await api.api.v1.users({ id: deleteTarget.id }).delete(
-        {},
-        withAuth()
-      );
+      const data = await client.users.delete(deleteTarget.id);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to delete user");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setDeleteTarget(null);
         fetchUsers();
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setDeleting(false);
     }

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { api } from "@/lib/api";
+import { client } from "@/lib/api";
+import { SDKError } from "auth-modules-sdk";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -33,27 +34,25 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data, error: apiError } = await api.api.v1.auth.register.post({
+      const data = await client.auth.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         project_key: formData.project_key,
       });
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Registration failed");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setSuccess(true);
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
-import { api, withAuth } from "@/lib/api";
-
-interface Role {
-  id: number;
-  name: string;
-  description: string | null;
-}
+import { client } from "@/lib/api";
+import { SDKError, type Role } from "auth-modules-sdk";
 
 // Protected system roles that cannot be modified or deleted
 const PROTECTED_ROLES = ["super_admin", "admin", "member"];
@@ -42,19 +37,17 @@ export default function RolesPage() {
     setError(null);
 
     try {
-      const { data, error: apiError } = await api.api.v1.roles.get(withAuth());
+      const data = await client.roles.list();
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to fetch roles");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setRoles(data.roles);
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -70,27 +63,22 @@ export default function RolesPage() {
     setCreateError(null);
 
     try {
-      const { data, error: apiError } = await api.api.v1.roles.post(
-        {
-          name: createForm.name,
-          description: createForm.description || undefined,
-        },
-        withAuth()
-      );
+      const data = await client.roles.create({
+        name: createForm.name,
+        description: createForm.description || undefined,
+      });
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setCreateError(errData?.error || "Failed to create role");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setShowCreateModal(false);
         setCreateForm({ name: "", description: "" });
         fetchRoles();
       }
-    } catch {
-      setCreateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setCreateError(err.message);
+      } else {
+        setCreateError("Network error. Please try again.");
+      }
     } finally {
       setCreating(false);
     }
@@ -128,23 +116,18 @@ export default function RolesPage() {
         return;
       }
 
-      const { data, error: apiError } = await api.api.v1.roles({ id: editRole.id }).put(
-        updateData,
-        withAuth()
-      );
+      const data = await client.roles.update(editRole.id, updateData);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setUpdateError(errData?.error || "Failed to update role");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setEditRole(null);
         fetchRoles();
       }
-    } catch {
-      setUpdateError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setUpdateError(err.message);
+      } else {
+        setUpdateError("Network error. Please try again.");
+      }
     } finally {
       setUpdating(false);
     }
@@ -155,23 +138,18 @@ export default function RolesPage() {
 
     setDeleting(true);
     try {
-      const { data, error: apiError } = await api.api.v1.roles({ id: deleteTarget.id }).delete(
-        {},
-        withAuth()
-      );
+      const data = await client.roles.delete(deleteTarget.id);
 
-      if (apiError) {
-        const errData = apiError.value as { error?: string };
-        setError(errData?.error || "Failed to delete role");
-        return;
-      }
-
-      if (data?.success) {
+      if (data.success) {
         setDeleteTarget(null);
         fetchRoles();
       }
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      if (err instanceof SDKError) {
+        setError(err.message);
+      } else {
+        setError("Network error. Please try again.");
+      }
     } finally {
       setDeleting(false);
     }

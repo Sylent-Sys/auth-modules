@@ -7,12 +7,20 @@ WORKDIR /app
 COPY package.json ./package.json
 COPY bun.lock ./bun.lock
 
-# Copy both frontend and backend package.json for workspace resolution
+# Copy frontend and SDK package.json for workspace resolution
 COPY frontend/package.json ./frontend/package.json
-COPY backend/package.json ./backend/package.json
+COPY auth-modules-sdk/package.json ./auth-modules-sdk/package.json
 
-# Install all workspace dependencies (needed for type checking)
+# Copy SDK source and build config
+COPY auth-modules-sdk/src ./auth-modules-sdk/src
+COPY auth-modules-sdk/tsconfig.json ./auth-modules-sdk/tsconfig.json
+COPY auth-modules-sdk/tsup.config.ts ./auth-modules-sdk/tsup.config.ts
+
+# Install all workspace dependencies
 RUN bun install
+
+# Build the SDK first
+RUN cd auth-modules-sdk && bun run build
 
 # Copy frontend source code and config files
 COPY frontend/src ./frontend/src
@@ -22,10 +30,6 @@ COPY frontend/tsconfig.app.json ./frontend/tsconfig.app.json
 COPY frontend/tsconfig.node.json ./frontend/tsconfig.node.json
 COPY frontend/vite.config.ts ./frontend/vite.config.ts
 COPY frontend/eslint.config.js ./frontend/eslint.config.js
-
-# Copy backend source for type imports (eden treaty)
-COPY backend/src ./backend/src
-COPY backend/tsconfig.json ./backend/tsconfig.json
 
 ENV NODE_ENV=production
 

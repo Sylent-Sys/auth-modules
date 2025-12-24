@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
 
 interface HealthStatus {
   status: string;
@@ -12,16 +11,17 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Contoh penggunaan Eden Treaty - type-safe!
     const checkHealth = async () => {
-      const { data, error } = await api.get();
-
-      if (error) {
+      try {
+        // Direct fetch for health endpoint (not part of SDK)
+        const response = await fetch(
+          (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/"
+        );
+        const data = await response.json();
+        setHealth(data);
+      } catch {
         setError("Failed to connect to API");
-        return;
       }
-
-      setHealth(data);
     };
 
     checkHealth();
