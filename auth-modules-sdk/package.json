@@ -1,0 +1,66 @@
+{
+  "name": "auth-modules-sdk",
+  "version": "1.0.0",
+  "description": "Isomorphic TypeScript SDK for Auth Modules REST API - works in Browser and Node.js/Bun",
+  "author": "Auth Modules",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/",
+    "format": "biome format --write src/",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "keywords": [
+    "auth",
+    "authentication",
+    "sdk",
+    "api-client",
+    "typescript",
+    "isomorphic",
+    "jwt",
+    "rbac"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sylent-Sys/auth-modules.git",
+    "directory": "auth-modules-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/Sylent-Sys/auth-modules/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
