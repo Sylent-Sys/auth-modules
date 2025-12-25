@@ -2,14 +2,14 @@
  * Roles Resource - Role management API calls
  */
 
-import { HttpClient } from '../http-client';
+import type { HttpClient } from '../http-client';
 import type {
   CreateRoleRequest,
-  UpdateRoleRequest,
-  ListRolesResponse,
   CreateRoleResponse,
-  UpdateRoleResponse,
   DeleteRoleResponse,
+  ListRolesResponse,
+  UpdateRoleRequest,
+  UpdateRoleResponse,
 } from '../types';
 
 /**
@@ -27,10 +27,10 @@ export class RolesResource {
   /**
    * List all roles
    * Requires Super Admin access
-   * 
+   *
    * @returns List of all roles
    * @throws {SDKError} On auth/permission error
-   * 
+   *
    * @example
    * ```ts
    * const { roles } = await client.roles.list();
@@ -44,11 +44,11 @@ export class RolesResource {
   /**
    * Create a new role
    * Requires Super Admin access
-   * 
+   *
    * @param data - Role creation data
    * @returns Created role info
    * @throws {SDKError} On validation error or if name exists
-   * 
+   *
    * @example
    * ```ts
    * const { role } = await client.roles.create({
@@ -66,12 +66,12 @@ export class RolesResource {
    * Update a role
    * Requires Super Admin access
    * Protected system roles cannot be modified
-   * 
+   *
    * @param id - Role ID
    * @param data - Fields to update
    * @returns Updated role info
    * @throws {SDKError} On not found, permission error, or protected role
-   * 
+   *
    * @example
    * ```ts
    * const { role } = await client.roles.update(4, {
@@ -87,11 +87,11 @@ export class RolesResource {
    * Delete a role
    * Requires Super Admin access
    * Protected system roles cannot be deleted
-   * 
+   *
    * @param id - Role ID
    * @returns Deletion confirmation
    * @throws {SDKError} On not found, permission error, or protected role
-   * 
+   *
    * @example
    * ```ts
    * await client.roles.delete(4);

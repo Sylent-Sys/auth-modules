@@ -2,14 +2,14 @@
  * Projects Resource - Project management API calls
  */
 
-import { HttpClient } from '../http-client';
+import type { HttpClient } from '../http-client';
 import type {
   CreateProjectRequest,
-  UpdateProjectRequest,
-  ListProjectsResponse,
   CreateProjectResponse,
-  UpdateProjectResponse,
   DeleteProjectResponse,
+  ListProjectsResponse,
+  UpdateProjectRequest,
+  UpdateProjectResponse,
 } from '../types';
 
 /**
@@ -27,10 +27,10 @@ export class ProjectsResource {
   /**
    * List all projects
    * Requires Admin access
-   * 
+   *
    * @returns List of all projects
    * @throws {SDKError} On auth/permission error
-   * 
+   *
    * @example
    * ```ts
    * const { projects } = await client.projects.list();
@@ -45,11 +45,11 @@ export class ProjectsResource {
    * Create a new project
    * Requires Admin access
    * Auto-generates a unique project_key
-   * 
+   *
    * @param data - Project creation data
    * @returns Created project with generated project_key
    * @throws {SDKError} On validation error
-   * 
+   *
    * @example
    * ```ts
    * const { project } = await client.projects.create({
@@ -66,12 +66,12 @@ export class ProjectsResource {
   /**
    * Update a project
    * Requires Super Admin access
-   * 
+   *
    * @param id - Project ID
    * @param data - Fields to update
    * @returns Updated project info
    * @throws {SDKError} On not found or permission error
-   * 
+   *
    * @example
    * ```ts
    * const { project } = await client.projects.update(1, {
@@ -88,11 +88,11 @@ export class ProjectsResource {
    * Delete a project
    * Requires Super Admin access
    * Cannot delete if project has active assignments
-   * 
+   *
    * @param id - Project ID
    * @returns Deletion confirmation
    * @throws {SDKError} On not found or if project has assignments
-   * 
+   *
    * @example
    * ```ts
    * await client.projects.delete(1);

@@ -4,16 +4,18 @@
  */
 
 import {
-  SDKConfig,
+  type ApiErrorResponse,
+  type AuthUser,
+  type RequestOptions,
+  type SDKConfig,
   SDKError,
-  StorageAdapter,
-  RequestOptions,
-  ApiErrorResponse,
+  type StorageAdapter,
   TOKEN_STORAGE_KEY,
+  type TokenPayload,
   USER_STORAGE_KEY,
-  AuthUser,
-  TokenPayload,
 } from './types';
+
+import { jwtDecode } from 'jwt-decode';
 
 /**
  * Default in-memory storage for environments without localStorage
@@ -75,20 +77,8 @@ function getDefaultStorage(): StorageAdapter {
  */
 function decodeToken(token: string): TokenPayload | null {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    
-    const payload = parts[1];
-    if (!payload) return null;
-    
-    let decoded: string;
-    if (typeof atob !== 'undefined') {
-      decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    } else {
-      decoded = Buffer.from(payload, 'base64').toString('utf-8');
-    }
-    
-    return JSON.parse(decoded) as TokenPayload;
+    const payload = jwtDecode<TokenPayload>(token);
+    return payload ?? null;
   } catch {
     return null;
   }
@@ -97,10 +87,10 @@ function decodeToken(token: string): TokenPayload | null {
 /**
  * Check if token is expired
  */
-function isTokenExpired(token: string, bufferSeconds: number = 60): boolean {
+function isTokenExpired(token: string, bufferSeconds = 60): boolean {
   const payload = decodeToken(token);
   if (!payload || !payload.exp) return true;
-  
+
   const now = Math.floor(Date.now() / 1000);
   return payload.exp - bufferSeconds <= now;
 }
@@ -119,6 +109,7 @@ export class HttpClient {
   private readonly storage: StorageAdapter;
   private readonly apiKey?: string;
   private readonly defaultHeaders: Record<string, string>;
+  private readonly clockSkewSeconds: number;
 
   constructor(config: SDKConfig) {
     // Remove trailing slash from base URL
@@ -126,6 +117,7 @@ export class HttpClient {
     this.timeout = config.timeout ?? 30000;
     this.storage = config.storage ?? getDefaultStorage();
     this.apiKey = config.apiKey;
+    this.clockSkewSeconds = config.clockSkewSeconds ?? 60;
     this.defaultHeaders = config.headers ?? {};
   }
 
@@ -184,7 +176,7 @@ export class HttpClient {
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
     if (!token) return false;
-    return !isTokenExpired(token);
+    return !isTokenExpired(token, this.clockSkewSeconds);
   }
 
   /**
@@ -204,15 +196,15 @@ export class HttpClient {
     params?: Record<string, string | number | boolean | undefined>
   ): string {
     const url = new URL(`${this.baseUrl}${path}`);
-    
+
     if (params) {
-      Object.entries(params).forEach(([key, value]) => {
+      for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== null) {
           url.searchParams.append(key, String(value));
         }
-      });
+      }
     }
-    
+
     return url.toString();
   }
 
@@ -261,11 +253,7 @@ export class HttpClient {
       return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new SDKError(
-          'Request timeout',
-          408,
-          'TIMEOUT_ERROR'
-        );
+        throw new SDKError('Request timeout', 408, 'TIMEOUT_ERROR');
       }
       throw error;
     } finally {
@@ -278,11 +266,11 @@ export class HttpClient {
    */
   private async parseResponse<T>(response: Response): Promise<T> {
     const contentType = response.headers.get('content-type');
-    
+
     if (contentType?.includes('application/json')) {
       return response.json() as Promise<T>;
     }
-    
+
     const text = await response.text();
     try {
       return JSON.parse(text) as T;
@@ -334,11 +322,7 @@ export class HttpClient {
       }
 
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new SDKError(
-          'Network error: Unable to reach the server',
-          0,
-          'NETWORK_ERROR'
-        );
+        throw new SDKError('Network error: Unable to reach the server', 0, 'NETWORK_ERROR');
       }
 
       throw new SDKError(

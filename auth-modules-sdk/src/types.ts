@@ -24,6 +24,8 @@ export interface SDKConfig {
   baseUrl: string;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
+  /** Acceptable clock skew in seconds when checking token expiry (default: 60) */
+  clockSkewSeconds?: number;
   /** Storage adapter for token persistence */
   storage?: StorageAdapter;
   /** API Key for server-to-server authentication */
@@ -488,18 +490,13 @@ export class SDKError extends Error {
   public readonly code: string;
   public readonly response?: ApiErrorResponse;
 
-  constructor(
-    message: string,
-    status: number = 500,
-    code: string = 'SDK_ERROR',
-    response?: ApiErrorResponse
-  ) {
+  constructor(message: string, status = 500, code = 'SDK_ERROR', response?: ApiErrorResponse) {
     super(message);
     this.name = 'SDKError';
     this.status = status;
     this.code = code;
     this.response = response;
-    
+
     // Maintains proper stack trace for where error was thrown (only in V8 engines)
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, SDKError);

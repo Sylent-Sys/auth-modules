@@ -2,11 +2,8 @@
  * Audit Logs Resource - Audit log read-only access
  */
 
-import { HttpClient } from '../http-client';
-import type {
-  ListAuditLogsParams,
-  ListAuditLogsResponse,
-} from '../types';
+import type { HttpClient } from '../http-client';
+import type { ListAuditLogsParams, ListAuditLogsResponse } from '../types';
 
 /**
  * API path prefix for audit-logs endpoints
@@ -24,16 +21,16 @@ export class AuditLogsResource {
   /**
    * List audit logs with optional filters
    * Requires Super Admin access
-   * 
+   *
    * @param params - Optional filter and pagination parameters
    * @returns List of audit logs with total count
    * @throws {SDKError} On auth/permission error
-   * 
+   *
    * @example
    * ```ts
    * // List all logs
    * const { logs, total } = await client.auditLogs.list();
-   * 
+   *
    * // Filter by entity type
    * const { logs } = await client.auditLogs.list({
    *   entity_type: 'user',
@@ -41,7 +38,7 @@ export class AuditLogsResource {
    *   limit: 10,
    *   offset: 0
    * });
-   * 
+   *
    * // Filter by actor
    * const { logs } = await client.auditLogs.list({
    *   actor_id: 1

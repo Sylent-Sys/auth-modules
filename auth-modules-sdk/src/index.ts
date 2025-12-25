@@ -1,34 +1,34 @@
 /**
  * Auth Modules SDK - Main Client
- * 
+ *
  * Isomorphic TypeScript SDK for Auth Modules REST API
  * Works in both Browser (React, Vue, etc.) and Server (Node.js, Bun, Deno)
- * 
+ *
  * @packageDocumentation
  */
 
-import { HttpClient, MemoryStorage, LocalStorageAdapter } from './http-client';
+import { HttpClient, LocalStorageAdapter, MemoryStorage } from './http-client';
 import {
-  AuthResource,
-  UsersResource,
-  ProjectsResource,
-  RolesResource,
   AssignmentsResource,
   AuditLogsResource,
+  AuthResource,
+  ProjectsResource,
+  RolesResource,
+  UsersResource,
 } from './resources';
 import type { SDKConfig } from './types';
 import { SDKError } from './types';
 
 /**
  * Main Auth Modules SDK Client
- * 
+ *
  * @example
  * ```ts
  * // Browser usage
  * const client = new AuthModulesClient({
  *   baseUrl: 'http://localhost:3000'
  * });
- * 
+ *
  * // Server usage with API key
  * const client = new AuthModulesClient({
  *   baseUrl: 'http://localhost:3000',
@@ -80,28 +80,28 @@ export class AuthModulesClient {
 
   /**
    * Create a new Auth Modules SDK client
-   * 
+   *
    * @param config - SDK configuration options
-   * 
+   *
    * @example
    * ```ts
    * // Basic browser setup
    * const client = new AuthModulesClient({
    *   baseUrl: 'https://api.example.com'
    * });
-   * 
+   *
    * // With custom timeout
    * const client = new AuthModulesClient({
    *   baseUrl: 'https://api.example.com',
    *   timeout: 60000
    * });
-   * 
+   *
    * // Server-to-server with API key
    * const client = new AuthModulesClient({
    *   baseUrl: 'https://api.example.com',
    *   apiKey: process.env.AUTH_API_KEY
    * });
-   * 
+   *
    * // With custom storage
    * const client = new AuthModulesClient({
    *   baseUrl: 'https://api.example.com',
@@ -111,11 +111,7 @@ export class AuthModulesClient {
    */
   constructor(config: SDKConfig) {
     if (!config.baseUrl) {
-      throw new SDKError(
-        'baseUrl is required',
-        400,
-        'CONFIG_ERROR'
-      );
+      throw new SDKError('baseUrl is required', 400, 'CONFIG_ERROR');
     }
 
     this.http = new HttpClient(config);
@@ -131,7 +127,7 @@ export class AuthModulesClient {
 
   /**
    * Check if the client is authenticated
-   * 
+   *
    * @returns True if authenticated with valid token
    */
   async isAuthenticated(): Promise<boolean> {
@@ -165,10 +161,10 @@ export {
 /**
  * Create a new Auth Modules client instance
  * Convenience factory function
- * 
+ *
  * @param config - SDK configuration
  * @returns AuthModulesClient instance
- * 
+ *
  * @example
  * ```ts
  * const client = createClient({

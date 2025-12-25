@@ -2,15 +2,15 @@
  * Assignments Resource - Project assignment management API calls
  */
 
-import { HttpClient } from '../http-client';
+import type { HttpClient } from '../http-client';
 import type {
   CreateAssignmentRequest,
-  ListAssignmentsParams,
-  DeleteAssignmentParams,
   CreateAssignmentResponse,
-  ListAssignmentsResponse,
+  DeleteAssignmentParams,
   DeleteAssignmentResponse,
   ListAssignmentRolesResponse,
+  ListAssignmentsParams,
+  ListAssignmentsResponse,
 } from '../types';
 
 /**
@@ -29,16 +29,16 @@ export class AssignmentsResource {
    * List all assignments
    * Optionally filter by project_id
    * Requires Admin access
-   * 
+   *
    * @param params - Optional filter parameters
    * @returns List of assignments
    * @throws {SDKError} On auth/permission error
-   * 
+   *
    * @example
    * ```ts
    * // List all assignments
    * const { assignments } = await client.assignments.list();
-   * 
+   *
    * // List assignments for a specific project
    * const { assignments } = await client.assignments.list({ project_id: 1 });
    * ```
@@ -53,11 +53,11 @@ export class AssignmentsResource {
    * Assign user to a project with a role
    * If assignment already exists, updates the role
    * Requires Admin access
-   * 
+   *
    * @param data - Assignment data
    * @returns Created/updated assignment info
    * @throws {SDKError} On not found (user/project/role) or permission error
-   * 
+   *
    * @example
    * ```ts
    * const { assignment } = await client.assignments.create({
@@ -75,11 +75,11 @@ export class AssignmentsResource {
   /**
    * Remove user's assignment from a project
    * Requires Admin access
-   * 
+   *
    * @param params - User ID and Project ID
    * @returns Deletion confirmation
    * @throws {SDKError} On not found or permission error
-   * 
+   *
    * @example
    * ```ts
    * await client.assignments.delete({
@@ -100,10 +100,10 @@ export class AssignmentsResource {
   /**
    * List all available roles for assignments
    * Requires Admin access
-   * 
+   *
    * @returns List of available roles
    * @throws {SDKError} On auth/permission error
-   * 
+   *
    * @example
    * ```ts
    * const { roles } = await client.assignments.listRoles();

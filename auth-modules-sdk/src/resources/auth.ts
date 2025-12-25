@@ -2,14 +2,14 @@
  * Auth Resource - Authentication related API calls
  */
 
-import { HttpClient } from '../http-client';
-import {
+import type { HttpClient } from '../http-client';
+import type {
+  AuthUser,
   LoginRequest,
   LoginResponse,
+  PublicKeyResponse,
   RegisterRequest,
   RegisterResponse,
-  PublicKeyResponse,
-  AuthUser,
 } from '../types';
 
 /**
@@ -25,11 +25,11 @@ export class AuthResource {
 
   /**
    * Login to a project
-   * 
+   *
    * @param credentials - Login credentials (email, password, project_key)
    * @returns Login response with token and user info
    * @throws {SDKError} On invalid credentials or server error
-   * 
+   *
    * @example
    * ```ts
    * const response = await client.auth.login({
@@ -40,15 +40,13 @@ export class AuthResource {
    * console.log(response.user);
    * ```
    */
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await this.http.post<LoginResponse>(
-      `${BASE_PATH}/login`,
-      credentials,
-      { skipAuth: true }
-    );
+  async login(credentials: LoginRequest, options?: { persist?: boolean }): Promise<LoginResponse> {
+    const response = await this.http.post<LoginResponse>(`${BASE_PATH}/login`, credentials, {
+      skipAuth: true,
+    });
 
-    // Store token and user info on successful login
-    if (response.success && response.token) {
+    // Persist token and user info on successful login unless caller opts out
+    if (response.success && response.token && options?.persist !== false) {
       await this.http.setToken(response.token);
       await this.http.setStoredUser(response.user);
     }
@@ -58,11 +56,11 @@ export class AuthResource {
 
   /**
    * Register a new user
-   * 
+   *
    * @param data - Registration data (name, email, password, project_key)
    * @returns Registration response with user info
    * @throws {SDKError} On validation error or if user already exists
-   * 
+   *
    * @example
    * ```ts
    * const response = await client.auth.register({
@@ -75,17 +73,13 @@ export class AuthResource {
    * ```
    */
   async register(data: RegisterRequest): Promise<RegisterResponse> {
-    return this.http.post<RegisterResponse>(
-      `${BASE_PATH}/register`,
-      data,
-      { skipAuth: true }
-    );
+    return this.http.post<RegisterResponse>(`${BASE_PATH}/register`, data, { skipAuth: true });
   }
 
   /**
    * Logout current user
    * Clears stored token and user data
-   * 
+   *
    * @example
    * ```ts
    * await client.auth.logout();
@@ -98,28 +92,25 @@ export class AuthResource {
 
   /**
    * Get JWT public key for token verification
-   * 
+   *
    * @returns Public key response
    * @throws {SDKError} On server error
-   * 
+   *
    * @example
    * ```ts
    * const { publicKey } = await client.auth.getPublicKey();
    * ```
    */
   async getPublicKey(): Promise<PublicKeyResponse> {
-    return this.http.get<PublicKeyResponse>(
-      `${BASE_PATH}/public-key`,
-      { skipAuth: true }
-    );
+    return this.http.get<PublicKeyResponse>(`${BASE_PATH}/public-key`, { skipAuth: true });
   }
 
   /**
    * Get current authenticated user from storage
    * Does NOT make an API call
-   * 
+   *
    * @returns User info or null if not authenticated
-   * 
+   *
    * @example
    * ```ts
    * const user = await client.auth.getCurrentUser();
@@ -135,9 +126,9 @@ export class AuthResource {
   /**
    * Check if user is authenticated
    * Checks for valid, non-expired token
-   * 
+   *
    * @returns True if authenticated
-   * 
+   *
    * @example
    * ```ts
    * if (await client.auth.isAuthenticated()) {
@@ -151,9 +142,9 @@ export class AuthResource {
 
   /**
    * Get current access token
-   * 
+   *
    * @returns Access token or null
-   * 
+   *
    * @example
    * ```ts
    * const token = await client.auth.getToken();
@@ -166,9 +157,9 @@ export class AuthResource {
   /**
    * Set access token manually
    * Useful for restoring session from external source
-   * 
+   *
    * @param token - JWT access token
-   * 
+   *
    * @example
    * ```ts
    * await client.auth.setToken(savedToken);
