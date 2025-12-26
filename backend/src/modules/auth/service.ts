@@ -2,15 +2,7 @@
 import { sql } from "../../lib/db";
 import { hashPassword, verifyPassword } from "../../lib/password";
 import { signJWT } from "../../lib/jwt";
-
-// Environment variables
-const JWT_ISSUER = process.env.JWT_ISSUER || "https://auth-modules.com";
-// Replace literal \n with actual newlines for PEM format
-const JWT_PRIVATE_KEY = (process.env.JWT_PRIVATE_KEY || "").replace(
-	/\\n/g,
-	"\n",
-);
-const JWT_EXPIRES_IN = parseInt(process.env.JWT_EXPIRES_IN || "3600", 10);
+import { JWT_PRIVATE_KEY, JWT_ISSUER, JWT_EXPIRES_IN } from "../../env";
 
 interface UserRow {
 	id: number;
@@ -125,7 +117,7 @@ export abstract class AuthService {
 			};
 		}
 
-		const token = signJWT(
+		const token = await signJWT(
 			{
 				iss: JWT_ISSUER,
 				sub: String(user.id),
@@ -266,11 +258,9 @@ export abstract class AuthService {
 	 * Get public key for JWT verification
 	 */
 	static getPublicKey(): string {
-		// Replace literal \n with actual newlines for PEM format
-		const publicKey = (process.env.JWT_PUBLIC_KEY || "").replace(/\\n/g, "\n");
-		if (!publicKey) {
-			throw new Error("JWT public key not configured");
-		}
-		return publicKey;
+		// Return public key from validated environment module
+		const { JWT_PUBLIC_KEY } = require("../../env");
+		if (!JWT_PUBLIC_KEY) throw new Error("JWT public key not configured");
+		return JWT_PUBLIC_KEY;
 	}
 }

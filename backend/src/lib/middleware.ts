@@ -1,9 +1,7 @@
 // Auth Middleware - JWT verification guard for protected routes
 import { Elysia } from "elysia";
 import { verifyJWT } from "./jwt";
-
-// Replace literal \n with actual newlines for PEM format
-const JWT_PUBLIC_KEY = (process.env.JWT_PUBLIC_KEY || "").replace(/\\n/g, "\n");
+import { JWT_PUBLIC_KEY } from "../env";
 
 export interface AuthUser {
 	id: number;
@@ -20,7 +18,7 @@ export interface AuthUser {
  * For admin-only endpoints, use this with additional role check
  */
 export const authGuard = new Elysia({ name: "Auth.Guard" })
-	.derive({ as: "scoped" }, ({ request, set }) => {
+	.derive({ as: "scoped" }, async ({ request, set }) => {
 		const authHeader = request.headers.get("Authorization");
 
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -41,7 +39,7 @@ export const authGuard = new Elysia({ name: "Auth.Guard" })
 			};
 		}
 
-		const result = verifyJWT(token, JWT_PUBLIC_KEY);
+		const result = await verifyJWT(token, JWT_PUBLIC_KEY);
 
 		if (!result.valid || !result.payload) {
 			set.status = 401;
@@ -50,7 +48,6 @@ export const authGuard = new Elysia({ name: "Auth.Guard" })
 				authError: result.error || "Invalid token",
 			};
 		}
-
 		const payload = result.payload;
 		const user: AuthUser = {
 			id: parseInt(payload.sub, 10),

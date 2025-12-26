@@ -1,16 +1,16 @@
-import * as crypto from "node:crypto";
+import { importPKCS8, importSPKI, jwtVerify, SignJWT } from "jose";
 
-// JWT RS256 utilities untuk Auth Modules
-// Private key untuk sign, Public key untuk verify
-
-const ALGORITHM = "RS256";
+/*
+	Replace hand-rolled JWT implementation with `jose`.
+	Exports async helpers that sign/verify RS256 JWTs using PEM keys.
+*/
 
 interface JWTPayload {
 	iss: string;
 	sub: string;
 	aud: string;
-	iat: number;
-	exp: number;
+	iat?: number;
+	exp?: number;
 	data: {
 		email: string;
 		name: string;
@@ -18,105 +18,75 @@ interface JWTPayload {
 	};
 }
 
-// Base64URL encode
-function base64UrlEncode(data: string | Buffer): string {
-	const base64 = Buffer.from(data).toString("base64");
-	return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-// Base64URL decode
-function base64UrlDecode(data: string): string {
-	const base64 = data.replace(/-/g, "+").replace(/_/g, "/");
-	const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-	return Buffer.from(base64 + padding, "base64").toString("utf-8");
-}
-
-// Sign JWT with RS256
-export function signJWT(
+export async function signJWT(
 	payload: Omit<JWTPayload, "iat" | "exp">,
-	privateKey: string,
+	privateKeyPem: string,
 	expiresInSeconds: number = 3600,
-): string {
-	const header = {
-		alg: ALGORITHM,
-		typ: "JWT",
-	};
-
+): Promise<string> {
+	const pk = await importPKCS8(privateKeyPem, "RS256");
 	const now = Math.floor(Date.now() / 1000);
-	const fullPayload: JWTPayload = {
-		...payload,
-		iat: now,
-		exp: now + expiresInSeconds,
-	};
 
-	const headerEncoded = base64UrlEncode(JSON.stringify(header));
-	const payloadEncoded = base64UrlEncode(JSON.stringify(fullPayload));
-	const signingInput = `${headerEncoded}.${payloadEncoded}`;
-
-	const sign = crypto.createSign("RSA-SHA256");
-	sign.update(signingInput);
-	const signature = sign.sign(privateKey, "base64");
-	const signatureEncoded = signature
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=+$/, "");
-
-	return `${signingInput}.${signatureEncoded}`;
+	// include `data` as a claim to preserve existing shape
+	return await new SignJWT({ data: payload.data })
+		.setProtectedHeader({ alg: "RS256" })
+		.setIssuer(payload.iss)
+		.setSubject(payload.sub)
+		.setAudience(payload.aud)
+		.setIssuedAt(now)
+		.setExpirationTime(now + expiresInSeconds)
+		.sign(pk);
 }
 
-// Verify JWT with RS256
-export function verifyJWT(
+export async function verifyJWT(
 	token: string,
-	publicKey: string,
-): { valid: boolean; payload?: JWTPayload; error?: string } {
+	publicKeyPem: string,
+): Promise<{ valid: boolean; payload?: JWTPayload; error?: string }> {
 	try {
-		const parts = token.split(".");
-		if (parts.length !== 3) {
-			return { valid: false, error: "Invalid token format" };
+		const pub = await importSPKI(publicKeyPem, "RS256");
+		const { payload: rawPayload } = await jwtVerify(token, pub, {
+			algorithms: ["RS256"],
+		});
+
+		const iss = typeof rawPayload.iss === "string" ? rawPayload.iss : "";
+		const sub = typeof rawPayload.sub === "string" ? rawPayload.sub : "";
+		const aud = typeof rawPayload.aud === "string" ? rawPayload.aud : "";
+		const iat = typeof rawPayload.iat === "number" ? rawPayload.iat : undefined;
+		const exp = typeof rawPayload.exp === "number" ? rawPayload.exp : undefined;
+
+		const rawData = (rawPayload as Record<string, unknown>).data;
+		let data: JWTPayload["data"] = { email: "", name: "", role: "" };
+		if (rawData && typeof rawData === "object") {
+			const d = rawData as Record<string, unknown>;
+			data = {
+				email: typeof d.email === "string" ? d.email : "",
+				name: typeof d.name === "string" ? d.name : "",
+				role: typeof d.role === "string" ? d.role : "",
+			};
 		}
 
-		const headerEncoded = parts[0] as string;
-		const payloadEncoded = parts[1] as string;
-		const signatureEncoded = parts[2] as string;
-		const signingInput = `${headerEncoded}.${payloadEncoded}`;
+		const result: JWTPayload = {
+			iss,
+			sub,
+			aud,
+			iat,
+			exp,
+			data,
+		};
 
-		// Verify signature
-		const signature = signatureEncoded.replace(/-/g, "+").replace(/_/g, "/");
-		const verify = crypto.createVerify("RSA-SHA256");
-		verify.update(signingInput);
-
-		const isValid = verify.verify(publicKey, signature, "base64");
-		if (!isValid) {
-			return { valid: false, error: "Invalid signature" };
-		}
-
-		// Decode payload
-		const payload: JWTPayload = JSON.parse(base64UrlDecode(payloadEncoded));
-
-		// Check expiration
-		const now = Math.floor(Date.now() / 1000);
-		if (payload.exp < now) {
-			return { valid: false, error: "Token expired" };
-		}
-
-		return { valid: true, payload };
-	} catch (_error) {
-		return { valid: false, error: "Token verification failed" };
+		return { valid: true, payload: result };
+	} catch (err: unknown) {
+		const message = err instanceof Error ? err.message : String(err);
+		return { valid: false, error: message };
 	}
 }
 
-// Generate RSA key pair (untuk development/setup)
+// Generate RSA key pair helper for development (kept for convenience)
+import * as crypto from "node:crypto";
 export function generateKeyPair(): { publicKey: string; privateKey: string } {
 	const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
 		modulusLength: 2048,
-		publicKeyEncoding: {
-			type: "spki",
-			format: "pem",
-		},
-		privateKeyEncoding: {
-			type: "pkcs8",
-			format: "pem",
-		},
+		publicKeyEncoding: { type: "spki", format: "pem" },
+		privateKeyEncoding: { type: "pkcs8", format: "pem" },
 	});
 
 	return { publicKey, privateKey };
