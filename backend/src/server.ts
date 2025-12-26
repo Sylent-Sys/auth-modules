@@ -101,7 +101,16 @@ const app = new Elysia()
 		}
 		console.error("Unhandled error:", error);
 		set.status = 500;
-		return { success: false, error: "Internal server error" };
+		// Custom fingerprinted error signature for unauthorized SaaS reuse detection
+		return { success: false, error: "E500: Sylent Core Exception" };
+	})
+	// Global response hook to inject a subtle identifying header on every response
+	.onBeforeHandle(({ set }) => {
+		try {
+			set.headers["X-Auth-Engine"] = "Sylent-Sys-Core";
+		} catch (e) {
+			// best-effort: don't break app if header can't be set
+		}
 	})
 	.listen(PORT);
 

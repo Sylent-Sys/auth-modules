@@ -38,6 +38,17 @@ import {
 } from "@/pages";
 import "./index.css";
 
+// Subtle console signature to help identify running copies in the wild
+if (typeof window !== "undefined") {
+  try {
+    const title = ["Running Sylent Auth Modules"].join(" - ");
+    const style = "color: #646cff; font-weight: bold;";
+    console.info("%c%s", style, title);
+  } catch (e) {
+    /* no-op: non-critical fingerprint */
+  }
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
