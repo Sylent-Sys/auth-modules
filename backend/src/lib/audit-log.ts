@@ -18,6 +18,7 @@
 
 // Audit Log Service - Tracks changes to Users and Roles
 import { sql } from "./db";
+import { getSignature } from "./signature";
 
 export type EntityType = "user" | "role";
 export type ActionType = "create" | "update" | "delete";
@@ -50,6 +51,12 @@ export abstract class AuditLogService {
 		const { entityType, entityId, action, actorId, actorName, changes } =
 			params;
 
+		// Lightweight watermark in server-side logs for provenance tracing
+		try {
+			console.debug(`[${getSignature()}] AuditLogService.log - ${action} ${entityType}#${entityId} by ${actorName}`);
+		} catch (e) {
+			// ignore
+		}
 		await sql`
 			INSERT INTO audit_logs (entity_type, entity_id, action, actor_id, actor_name, changes)
 			VALUES (${entityType}, ${entityId}, ${action}, ${actorId}, ${actorName}, ${changes ? JSON.stringify(changes) : null})

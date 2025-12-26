@@ -28,6 +28,7 @@ import { usersController } from "./modules/users";
 import { rolesController } from "./modules/roles";
 import { auditLogsController } from "./modules/audit-logs";
 import { initCorsOrigins, isOriginAllowed } from "./lib/cors";
+import { getSignature } from "./lib/signature";
 
 const PORT = process.env.PORT || 3000;
 
@@ -102,12 +103,13 @@ const app = new Elysia()
 		console.error("Unhandled error:", error);
 		set.status = 500;
 		// Custom fingerprinted error signature for unauthorized SaaS reuse detection
-		return { success: false, error: "E500: Sylent Core Exception" };
+		return { success: false, error: `E500: ${getSignature()} Core Exception` };
 	})
 	// Global response hook to inject a subtle identifying header on every response
 	.onBeforeHandle(({ set }) => {
 		try {
-			set.headers["X-Auth-Engine"] = "Sylent-Sys-Core";
+			// Use signature util so the identifying string appears in multiple places
+			set.headers["X-Auth-Engine"] = `${getSignature()}-Core`;
 		} catch (e) {
 			// best-effort: don't break app if header can't be set
 		}

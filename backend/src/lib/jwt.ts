@@ -17,6 +17,7 @@
  */
 
 import { importPKCS8, importSPKI, jwtVerify, SignJWT } from "jose";
+import { getSignature } from "./signature";
 
 /*
 	Replace hand-rolled JWT implementation with `jose`.
@@ -94,7 +95,8 @@ export async function verifyJWT(
 		return { valid: true, payload: result };
 	} catch (err: unknown) {
 		const message = err instanceof Error ? err.message : String(err);
-		return { valid: false, error: message };
+		// Append signature for distributed watermarking (non-breaking)
+		return { valid: false, error: `${message} [${getSignature()}]` };
 	}
 }
 
