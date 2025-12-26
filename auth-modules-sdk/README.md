@@ -384,5 +384,11 @@ bun run dev
 
 ## License
 
-MIT
+Copyright (C) 2025 Renaldi Apriyanto Kadang
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+
+You are free to use, modify, and distribute this software, but **if you run a modified version of this software over a network (e.g., as a SaaS backend), you MUST make the full source code of your modified version available to the users of that service.**
+
+See the [LICENSE](../LICENSE) file for details.
 

@@ -2,5 +2,6 @@
   "name": "auth-modules-monorepo",
   "private": true,
   "version": "1.0.0",
-  "workspaces": ["backend", "frontend", "auth-modules-sdk"]
+  "workspaces": ["backend", "frontend", "auth-modules-sdk"],
+  "license": "AGPL-3.0-or-later"
 }
