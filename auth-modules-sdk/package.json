@@ -1,6 +1,6 @@
 {
   "name": "auth-modules-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Isomorphic TypeScript SDK for Auth Modules REST API - works in Browser and Node.js/Bun",
   "author": "Auth Modules",
   "license": "MIT",
